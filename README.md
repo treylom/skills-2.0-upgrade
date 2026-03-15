@@ -185,7 +185,16 @@ Remaining gap to 100%: body >500 lines (13 skills, needs Opus splitting), broken
 
 ### Self-Improvement
 
-This tool was used to diagnose and upgrade itself through 3 iterations, achieving **100% compliance** on its own 12-item checklist. The self-improvement process validated that the diagnostic criteria are both strict enough to catch real issues and achievable with reasonable effort. See the full [Self-Improvement Report](SELF-IMPROVEMENT-REPORT.md) for details.
+This tool was used to diagnose and upgrade itself through 4 iterations:
+
+| Iteration | What happened | Result |
+|-----------|--------------|--------|
+| 1 | Initial 6-agent team build | 100% compliance on first build |
+| 2 | Real-world validation on 151 skills | 62% → 94.3% (batch P1-P3 script created) |
+| 3 | UX redesign + false positive fix | Phase-by-phase guide, 100% maintained |
+| 4 | Security scan + self-scan | `--security` mode added, clean pass |
+
+See the full [Self-Improvement Report](SELF-IMPROVEMENT-REPORT.md) for details.
 
 ## Project Structure
 
@@ -411,7 +420,16 @@ Compliance improved: 62.0% -> 78.2%
 
 ### 자가 개선
 
-이 도구는 자체 12항목 체크리스트로 스스로를 진단·개선하여 3회 반복 만에 **100% 준수율**을 달성했습니다. 자가 개선 과정은 진단 기준이 실제 이슈를 잡을 만큼 엄격하면서도 합리적인 노력으로 달성 가능함을 검증합니다. 전체 리포트: [Self-Improvement Report](SELF-IMPROVEMENT-REPORT.md)
+이 도구는 자체 진단 도구로 스스로를 4회 반복 개선했습니다:
+
+| 반복 | 내용 | 결과 |
+|------|------|------|
+| 1 | 6-agent 팀 초기 빌드 | 100% 준수율 초기 달성 |
+| 2 | 151개 실제 스킬 검증 | 62% → 94.3% (배치 스크립트 작성) |
+| 3 | UX 개선 + false positive 수정 | Phase별 가이드 추가, 100% 유지 |
+| 4 | 보안 스캔 + 자체 적용 | `--security` 모드 추가, clean 통과 |
+
+전체 리포트: [Self-Improvement Report](SELF-IMPROVEMENT-REPORT.md)
 
 ## 프로젝트 구조
 
