@@ -155,10 +155,15 @@ Compliance improved: 62.0% -> 78.2%
 
 ## Case Study
 
-Real-world migration of 94 skills:
-- Starting compliance: 62%
-- After Phase 1 fixes: 78%
-- Top issues: missing frontmatter (12), >500 lines (8), missing description (15)
+Real-world migration of 151 skills:
+
+| Phase | Compliance | What changed |
+|-------|-----------|--------------|
+| Baseline | 62% | No Skills 2.0 structure |
+| After P1-P2 | 78% | Frontmatter + name normalization |
+| After P1-P3 | **94.3%** | + description "Use when..." pattern |
+
+Remaining gap to 100%: body >500 lines (13 skills, needs Opus splitting), broken references (13), imperative form (some)
 
 ## Project Structure
 
