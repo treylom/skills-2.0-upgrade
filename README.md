@@ -5,6 +5,8 @@
 
 > Zero-token diagnostic engine + Claude Code skill for automatically upgrading skills to Skills 2.0 compliance.
 
+**[한국어 버전은 아래를 참고하세요 / Korean version below](#skills-20-자동-업그레이드)**
+
 ## What is Skills 2.0?
 
 Skills 2.0 is Anthropic's 2026 skill framework for making reusable agent instructions easier to discover, load, and maintain.
@@ -178,7 +180,6 @@ skills-2.0-upgrade/
 ├── CHANGELOG.md
 ├── install.sh
 ├── LICENSE
-├── README-ko.md
 └── README.md
 ```
 
@@ -194,3 +195,201 @@ Our 12-item diagnostic checklist merges 8 items from Skills 2.0 with 4 additiona
 ## License
 
 MIT — see [LICENSE](LICENSE) for details.
+
+---
+
+# Skills 2.0 자동 업그레이드
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)]()
+
+> Zero-token diagnostic engine + Claude Code skill for automatically upgrading skills to Skills 2.0 compliance.
+
+## Skills 2.0이란?
+
+Skills 2.0은 Anthropic이 2026년에 정리한 스킬 프레임워크로, 재사용 가능한 에이전트 지침을 더 잘 찾고, 더 적은 토큰으로 불러오고, 더 쉽게 유지보수하도록 설계되었습니다.
+핵심은 **Progressive Disclosure** 3-Tier 구조입니다. frontmatter는 트리거링용, `SKILL.md`는 실행 가이드용, `references/`는 필요할 때만 불러오는 대용량 참고자료용입니다.
+현재 생태계는 **351K+ published skills** 규모까지 커졌기 때문에, 초기의 단일 파일 방식보다 검색 품질, 토큰 효율, 구조 일관성이 훨씬 중요해졌습니다.
+이 프로젝트는 zero-token bash 진단과 가이드형 업그레이드 워크플로우로 기존 Claude Code 스킬을 그 구조로 이전할 수 있게 돕습니다.
+
+## 빠른 시작
+
+### 설치 (primary)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/treylom/skills-2.0-upgrade/main/install.sh | bash
+```
+
+### 로컬 클론에서 설치 (alternative)
+
+```bash
+bash install.sh
+```
+
+### 기본 사용법
+
+```bash
+/skills-upgrade
+/skills-upgrade --dry-run
+/skills-upgrade --upgrade
+```
+
+## 주요 기능
+
+- **Zero-token 진단**: 순수 bash, LLM 호출 불필요
+- **12항목 가중 체크리스트**: 종합 준수율 점수
+- **P1-P4 자동 수정**: frontmatter, name, description 자동 수정
+- **업그레이드 전 백업**: tar.gz 자동 백업
+- **크로스 플랫폼**: WSL, macOS, Linux
+- **JSON 출력**: CI/CD 통합용 머신 파싱 가능
+- **슬래시 커맨드**: `/skills-upgrade` 3가지 모드
+
+## 사용법
+
+### 진단 (기본)
+
+```bash
+/skills-upgrade
+```
+
+예시 출력:
+
+```text
+Skills 2.0 Compliance Report
+=============================
+Date: 2026-03-15 14:30:22
+Path: /home/user/.claude/skills/
+Skills scanned: 94
+Overall compliance: 78.2%
+
+Top Issues:
+1. Missing frontmatter: 12 skills
+2. Over 500 lines: 8 skills
+3. Missing description: 15 skills
+```
+
+### 드라이 런
+
+```bash
+/skills-upgrade --dry-run
+```
+
+예시 출력:
+
+```text
+Planned changes
+- P1 Add frontmatter: 12 files
+- P2 Normalize name field: 7 files
+- P3 Generate description: 15 files
+- P4 Add invocation control: 4 files
+No files were modified.
+```
+
+### 업그레이드
+
+```bash
+/skills-upgrade --upgrade
+```
+
+예시 출력:
+
+```text
+Backup created: ~/.claude/skills-backup-20260315-143022.tar.gz
+Re-diagnosing after fixes...
+Compliance improved: 62.0% -> 78.2%
+```
+
+### 스크립트 직접 실행
+
+```bash
+~/.claude/scripts/diagnose.sh ~/.claude/skills/
+~/.claude/scripts/diagnose.sh ~/.claude/skills/ --json
+~/.claude/scripts/diagnose.sh ~/.claude/skills/ --verbose
+~/.claude/scripts/diagnose.sh ~/.claude/skills/my-skill.md
+```
+
+## 12항목 진단 체크리스트
+
+| # | 항목 | 가중치 | 통과 조건 |
+|---|------|--------|----------|
+| 1 | Frontmatter 존재 | 20% | 첫 줄이 `---`이고 닫는 `---`가 존재 |
+| 2 | `name:` 필드 | 8% | frontmatter에 `name:`이 있고 하이픈+영숫자만 사용 |
+| 3 | `description:` 필드 | 10% | frontmatter에 비어있지 않은 `description:` 값 존재 |
+| 4 | Description `Use when...` 패턴 | 5% | description이 `Use when`으로 시작 (대소문자 무관) |
+| 5 | Description 3인칭 | 3% | description에 `you` 또는 `your` 미포함 |
+| 6 | 본문 ≤500줄 | 15% | frontmatter 제외 본문이 500줄 이하 |
+| 7 | 디렉토리 구조 | 10% | 긴 스킬은 `SKILL.md` + `references/` 사용; 짧은 스킬은 자동 통과 |
+| 8 | `disable-model-invocation` | 8% | 레퍼런스형 스킬에 `disable-model-invocation: true` 포함; 그 외 자동 통과 |
+| 9 | 고아 디렉토리 없음 | 5% | 스킬 디렉토리에 `SKILL.md` 또는 최소 1개 `.md` 파일 존재 |
+| 10 | 깨진 참조 없음 | 5% | `references/` 링크가 실제 파일로 연결됨 |
+| 11 | Progressive Disclosure | 5% | `references/`가 있는 스킬은 본문에서 `references/`를 명시적으로 안내 |
+| 12 | 명령형 지시문 | 6% | 명령형 지시문이 2인칭 조언 표현보다 많음 |
+
+## 모델 가이드
+
+| 작업 | 모델 | Effort | 이유 |
+|------|------|--------|------|
+| 진단만 | 아무 모델 (bash) | N/A | LLM 불필요 |
+| P1-P2 자동 수정 | Sonnet | medium | 단순 패턴 매칭 |
+| P3 파일 분할 | Opus | high | 콘텐츠 이해 필요 |
+| 전체 업그레이드 | Opus | high | 분할 포함 |
+
+## 크로스 플랫폼 호환
+
+| 플랫폼 | 지원 수준 | 비고 |
+|--------|----------|------|
+| Claude Code | Full | 모든 기능 |
+| Codex CLI | Partial | JSON 출력 모드 |
+| Antigravity | Partial | 스킬 읽기 + bash |
+| Cursor/Windsurf | Minimal | .md 읽기만 |
+
+## 작동 원리
+
+4-Phase 파이프라인:
+1. **Scan**: 인자 파싱, diagnose.sh 실행
+2. **Report**: 준수율 요약 생성
+3. **Plan**: 변경 계획 표시 (dry-run/upgrade)
+4. **Execute**: 백업 → 자동 수정 → 재진단 (upgrade만)
+
+## 실제 사례
+
+94개 스킬 마이그레이션 사례:
+- 시작 준수율: 62%
+- Phase 1 수정 후: 78%
+- 주요 이슈: frontmatter 누락 (12), 500줄 초과 (8), description 누락 (15)
+
+## 프로젝트 구조
+
+```text
+skills-2.0-upgrade/
+├── commands/
+│   └── skills-upgrade.md
+├── scripts/
+│   ├── backup.sh
+│   └── diagnose.sh
+├── skills/
+│   └── skills-2.0-upgrade/
+│       ├── SKILL.md
+│       └── references/
+│           ├── diagnostic-criteria.md
+│           ├── skills-2.0-spec.md
+│           ├── trigger-optimization.md
+│           └── upgrade-actions.md
+├── CHANGELOG.md
+├── install.sh
+├── LICENSE
+└── README.md
+```
+
+## Acknowledgments
+
+이 프로젝트는 다음 작업을 기반으로 합니다:
+
+- **[superpowers:writing-skills](https://github.com/anthropics/superpowers)** (Anthropic) — TDD 기반 스킬 작성 방법론, Claude Search Optimization (CSO), 그리고 공식 SKILL.md frontmatter 명세.
+- **[fivetaku/skillers-suda](https://github.com/fivetaku/skillers-suda)** (MIT) — 9-item structural validation (`validate-skill.sh`), Auto Eval 방법론 (`with_skill` vs `without_skill` A/B comparison), 그리고 description trigger optimization 전략.
+
+이 프로젝트의 12-item diagnostic checklist는 Skills 2.0의 8개 항목과 skillers-suda의 추가 4개 항목(third-person description, progressive disclosure, imperative form, enhanced trigger validation)을 결합합니다.
+
+## License
+
+MIT — 자세한 내용은 [LICENSE](LICENSE)를 참고하세요.
