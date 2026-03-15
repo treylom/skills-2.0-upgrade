@@ -1,44 +1,145 @@
 ---
-description: "Skills 2.0 auto-diagnosis and upgrade. /skills-upgrade [--diagnose|--dry-run|--upgrade] [--path <dir>]"
+description: "Skills 2.0 auto-diagnosis and upgrade. /skills-upgrade [--diagnose|--dry-run|--upgrade] [--path <dir>] [skill-name...]"
 allowedTools: Bash, Read, Write, Edit, Glob, Grep, AskUserQuestion
 ---
 
 # /skills-upgrade
 
-Diagnose and upgrade a skill directory to Skills 2.0 compliance through a guided, phase-by-phase workflow.
+Diagnose and upgrade skills to Skills 2.0 compliance through a guided, phase-by-phase workflow. Supports single skill, multiple skills, or full directory scan.
 
 ## Usage
 
 ```bash
-/skills-upgrade                          # Diagnose (default)
-/skills-upgrade --diagnose               # Same as above
-/skills-upgrade --dry-run                # Preview changes without applying
-/skills-upgrade --upgrade                # Interactive guided upgrade
-/skills-upgrade --path /custom/skills/   # Custom target path
+/skills-upgrade                              # Interactive — asks what to upgrade
+/skills-upgrade my-skill                     # Single skill by name
+/skills-upgrade skill-a skill-b skill-c      # Multiple skills by name
+/skills-upgrade --all                        # All skills in default directory
+/skills-upgrade --path /custom/skills/       # All skills in custom directory
+/skills-upgrade --diagnose                   # Diagnose only (no changes)
+/skills-upgrade --dry-run                    # Preview changes
+/skills-upgrade --upgrade                    # Interactive guided upgrade
 ```
 
 Default path: `$HOME/.claude/skills/`
 
 ## Execution Flow
 
-### Phase 1 — Scan
+### Step 0 — Target Selection (MANDATORY)
 
-1. Parse `$ARGUMENTS` for mode (`--diagnose`, `--dry-run`, `--upgrade`) and `--path <dir>`.
-2. Resolve target directory. Default: `$HOME/.claude/skills/`.
-3. Run diagnostics:
+Before any diagnosis, determine what the user wants to upgrade.
+
+#### Case A: Arguments provided
+
+Parse `$ARGUMENTS` for skill names, flags, and paths:
+
+| Pattern | Interpretation |
+|---------|---------------|
+| `my-skill` | Single skill — find `my-skill.md` or `my-skill/SKILL.md` in skills dir |
+| `skill-a skill-b` | Multiple skills — find each by name |
+| `--all` | All skills in default directory |
+| `--path /dir/` | All skills in specified directory |
+| `--path /dir/ skill-a` | Specific skill in specified directory |
+| (no skill names, no --all) | Go to Case B (interactive) |
+
+Skill name resolution order:
+1. `$SKILLS_DIR/{name}.md` (flat file)
+2. `$SKILLS_DIR/{name}/SKILL.md` (directory skill)
+3. Exact path if absolute path provided
+
+If a skill name is not found, list available skills and ask the user to pick.
+
+#### Case B: No arguments (interactive)
+
+Run full directory scan first to show what's available:
 
 ```bash
+scripts/diagnose.sh "$SKILLS_DIR" --json
+```
+
+Then present the selection:
+
+```
+AskUserQuestion:
+  "What would you like to upgrade?"
+  Options:
+    - "Specific skill(s)" — I'll show you the list to pick from
+    - "All skills" — Scan and upgrade the entire directory
+```
+
+If "Specific skill(s)" selected, show a scored list and let the user pick:
+
+```markdown
+## Your Skills (sorted by compliance score)
+
+| # | Skill | Score | Top Issue |
+|---|-------|-------|-----------|
+| 1 | my-broken-skill | 48% | Missing frontmatter |
+| 2 | old-helper | 62% | Body >500 lines |
+| 3 | api-guide | 75% | No "Use when..." |
+| ... | ... | ... | ... |
+| N | perfect-skill | 100% | — |
+
+Skills below 100% compliance: M of N
+```
+
+```
+AskUserQuestion:
+  "Which skills would you like to upgrade? Enter skill names or numbers (comma-separated), or 'all'."
+  (free text input)
+```
+
+Parse the response:
+- Numbers: map to skill names from the table
+- Names: validate they exist
+- "all": upgrade everything
+
+#### Result of Step 0
+
+Set `TARGET_SKILLS` to one of:
+- A list of specific file paths (single or multiple)
+- `"all"` (full directory scan)
+
+All subsequent phases operate only on `TARGET_SKILLS`.
+
+### Phase 1 — Scan
+
+Run diagnostics on the selected scope:
+
+```bash
+# Single/multiple skills: diagnose each individually
+for skill in $TARGET_SKILLS; do
+  scripts/diagnose.sh "$skill" --json
+done
+
+# All skills: diagnose the directory
 scripts/diagnose.sh "$TARGET_PATH" --json
 ```
 
-4. Parse JSON into a working structure: overall compliance, skill count, issue counts by P1-P7.
-5. If diagnosis fails, stop and show the raw output.
+Parse JSON into: overall compliance, skill count, issue counts by P1-P7.
+If diagnosis fails, stop and show the raw output.
 
 ### Phase 2 — Report
 
-Present a clear, friendly report with context about what each issue means and how impactful fixing it would be.
+Present a clear, friendly report scoped to the selected skills.
 
-#### Compliance Summary
+#### For specific skill(s):
+
+```markdown
+## Compliance Report: {skill-name}
+
+Score: X% (N of 12 checks passed)
+
+| # | Check | Weight | Status | Note |
+|---|-------|--------|--------|------|
+| 1 | Frontmatter | 20% | PASS/FAIL | ... |
+| 2 | Name field | 8% | PASS/FAIL | ... |
+| ... | ... | ... | ... | ... |
+
+Issues found: [list]
+Suggestions: [list]
+```
+
+#### For all skills:
 
 ```markdown
 ## Your Skills 2.0 Compliance Report
@@ -52,53 +153,47 @@ Present a clear, friendly report with context about what each issue means and ho
 
 | Priority | Count | What it means | Impact if fixed |
 |----------|-------|---------------|-----------------|
-| P1 (frontmatter) | N | Skills without YAML frontmatter can't be discovered by skill loaders | High — frontmatter drives routing |
-| P2 (name) | N | Invalid or missing name field breaks skill identification | Medium — needed for stable references |
-| P3 (description) | N | Description doesn't start with "Use when..." reducing discoverability | High aggregate — affects CSO across many skills |
-| P4 (invocation) | N | Reference files load unnecessary model context | Low per skill — saves tokens |
-| P5 (body length) | N | Body exceeds 500 lines, hurting token efficiency | Medium — needs manual Opus splitting |
-| P6-P7 (structure) | N | Directory structure or orphan issues | Low — cleanup work |
+| P1 (frontmatter) | N | Skills can't be discovered by skill loaders | High |
+| P2 (name) | N | Invalid name breaks skill identification | Medium |
+| P3 (description) | N | Missing "Use when..." reduces discoverability | High aggregate |
+| P4 (invocation) | N | Reference files load unnecessary context | Low per skill |
+| P5 (body length) | N | Body >500 lines hurts token efficiency | Medium |
+| P6-P7 (structure) | N | Directory or orphan issues | Low |
 ```
 
-#### Upgrade Path Recommendation
-
-Based on the diagnosis, present the recommended upgrade path:
+#### Upgrade Path (always show)
 
 ```markdown
 ### Recommended Upgrade Path
 
-Based on your current score of X%, here's what each phase would improve:
+| Phase | What it fixes | Expected improvement | Automation |
+|-------|--------------|---------------------|------------|
+| P1-P2 | Frontmatter + name | +10-16%p | Fully automatic |
+| P3 | Description "Use when..." | +8-16%p | Semi-auto (batch) |
+| P4 | Invocation control | +1-3%p | Semi-auto (confirm) |
+| P5+ | File splitting + structure | +2-6%p | Manual (Opus) |
 
-| Phase | What it fixes | Expected improvement | Automation level |
-|-------|--------------|---------------------|-----------------|
-| P1-P2 | Frontmatter + name normalization | +10-16%p → ~Y% | Fully automatic (no confirmation needed) |
-| P3 | Description "Use when..." pattern | +8-16%p → ~Z% | Semi-automatic (batch with preview) |
-| P4 | Invocation control on references | +1-3%p → ~W% | Semi-automatic (requires confirmation) |
-| P5+ | File splitting + structure fixes | +2-6%p → ~100% | Manual (Opus model recommended) |
-
-The biggest bang-for-buck is P1-P3: typically takes compliance from ~62% to ~94% with minimal effort.
+The biggest bang-for-buck is P1-P3: typically 62% → 94% with minimal effort.
 ```
 
 If mode is `--diagnose`, stop here.
 
 ### Phase 3 — Plan (--dry-run and --upgrade)
 
-Show the proposed change plan with concrete file counts:
+Show proposed changes scoped to selected skills:
 
 ```markdown
-## Planned Changes
+## Planned Changes ({scope description})
 
-- **P1**: N files will receive YAML frontmatter
-- **P2**: N files will have their `name` field normalized to kebab-case
-- **P3**: N descriptions will be transformed to "Use when..." pattern
-- **P4**: N reference-type files will get `disable-model-invocation: true`
+- **P1**: N files will receive frontmatter
+- **P2**: N files will have `name` normalized
+- **P3**: N descriptions will be transformed to "Use when..."
+- **P4**: N reference files will get invocation control
 
-### P5+ (requires manual follow-up)
-- N files exceed 500 lines — splitting needs content understanding (Opus recommended)
-- N files have broken references — target files need to be created or links removed
-- N files use advisory phrasing instead of imperative commands
+### P5+ (manual follow-up)
+- N files exceed 500 lines
+- N files have broken references
 
-Total files affected: N
 Backup will be created before any changes.
 ```
 
@@ -106,9 +201,7 @@ If mode is `--dry-run`, stop here.
 
 ### Phase 4 — Execute (--upgrade only)
 
-Guide the user through each phase interactively, asking permission at each step.
-
-#### Step 4.0 — Ask scope
+#### Step 4.0 — Ask upgrade scope
 
 ```
 AskUserQuestion:
@@ -117,7 +210,7 @@ AskUserQuestion:
     - "P1-P2 only (automatic, safe)" — frontmatter + name fixes
     - "P1-P3 (recommended)" — includes description optimization
     - "P1-P4 (thorough)" — includes invocation control
-    - "P1-P4 + P5 guidance" — full upgrade with manual splitting guide
+    - "P1-P4 + P5 guidance" — full upgrade with splitting guide
 ```
 
 #### Step 4.1 — Backup
@@ -126,71 +219,49 @@ AskUserQuestion:
 scripts/backup.sh "$TARGET_PATH"
 ```
 
-If backup fails, stop. Show the backup path and size.
+If backup fails, stop. Show path and size.
 
 #### Step 4.2 — P1-P2 (Automatic)
 
-Run batch fix for P1 and P2:
+For specific skills, edit each file directly using Read + Edit tools.
+For all skills, run the batch script:
 
 ```bash
-python3 scripts/batch-p1p2p3.py "$TARGET_PATH" --dry-run  # preview first
+python3 scripts/batch-p1p2p3.py "$TARGET_PATH" --dry-run  # preview
+python3 scripts/batch-p1p2p3.py "$TARGET_PATH"             # apply
 ```
 
-Show a summary of what will change, then apply:
-
-```bash
-python3 scripts/batch-p1p2p3.py "$TARGET_PATH"
-```
+For single/multiple skills, apply P1-P2 fixes inline:
+1. Read the skill file
+2. Check frontmatter presence → add if missing
+3. Check name field → normalize if invalid
+4. Write the fixed file
 
 Report: "P1-P2 complete: N frontmatter added, M names normalized."
 
 #### Step 4.3 — P3 (Semi-automatic)
 
-The batch script also handles P3. Show a sample of 5 description transformations:
+Show description transformation previews:
 
 ```markdown
-### Sample Description Changes (5 of N)
+### Description Changes
 
 | Skill | Before | After |
 |-------|--------|-------|
-| my-skill | "Analyzes code quality" | "Use when analyzing code quality" |
-| ... | ... | ... |
+| {name} | "Analyzes code quality" | "Use when analyzing code quality" |
 
-N total descriptions will be updated. Proceed?
+Proceed with these changes?
 ```
 
-Wait for user confirmation before applying. If user says no, skip P3.
-
-Report: "P3 complete: N descriptions updated to 'Use when...' pattern."
+Wait for confirmation. Apply or skip.
 
 #### Step 4.4 — P4 (Confirmation required)
 
-Identify reference-type skills using heuristics:
-- name contains: guide, reference, spec, examples, templates, schema, collection, strategies, checklist, encyclopedia, glossary
-- file lives under `references/` directory
-
-Present candidates:
-
-```markdown
-### Invocation Control Candidates
-
-These files appear to be reference material and should have `disable-model-invocation: true`:
-
-| # | File | Reason |
-|---|------|--------|
-| 1 | references/api-guide.md | Name contains "guide" |
-| 2 | references/schema.md | Name contains "schema" |
-
-Apply invocation control to these files?
-```
-
-AskUserQuestion: approve all / selective / skip.
+Identify reference-type skills, present candidates, ask for approval.
 
 #### Step 4.5 — Re-diagnose
 
-```bash
-scripts/diagnose.sh "$TARGET_PATH" --json
-```
+Re-run diagnosis on the same scope (selected skills or full directory).
 
 #### Step 4.6 — Before/After Report
 
@@ -199,55 +270,35 @@ scripts/diagnose.sh "$TARGET_PATH" --json
 
 | Metric | Before | After | Change |
 |--------|--------|-------|--------|
-| Overall compliance | X% | Y% | +Z%p |
+| Compliance | X% | Y% | +Z%p |
 | P1 issues | N | 0 | -N |
 | P2 issues | N | 0 | -N |
 | P3 issues | N | M | -K |
 | P4 issues | N | M | -K |
 | P5+ issues | N | N | (manual) |
-
-Backup: ~/.claude/.claude/skills-backup-TIMESTAMP.tar.gz
 ```
 
 #### Step 4.7 — Beyond P4 Guidance
 
-After the automated phases, explain what remains and how to address it:
-
 ```markdown
-### What's Left? A Guide to 100% Compliance
-
-Your skills are now at Y% — great progress! Here's what would get you to 100%:
+### What's Left?
 
 **1. Body >500 lines (P5) — N skills**
-These skills are too long for efficient token loading. Each needs to be split into
-a compact SKILL.md (core guide) + references/ (detailed material).
-
-How to proceed:
-- Use Opus model with high effort for content understanding
-- Process one skill at a time: read → identify sections → propose split → confirm → apply
-- Add "See references/..." pointers in SKILL.md for progressive disclosure
-- Longest skills to prioritize: [list top 3 by line count]
+Split into SKILL.md + references/. Use Opus model.
+Longest: [list top 3]
 
 **2. Broken references — N skills**
-Some skills reference files in references/ that don't exist yet.
-Options: create the missing reference files, or remove the broken links.
-Files with broken references: [list]
+Create missing reference files or remove broken links.
 
 **3. Imperative form — N skills**
-These skills use advisory phrasing ("you should check") instead of
-direct commands ("Check", "Run", "Verify"). Rewrite instructions as commands.
+Rewrite "you should" → direct commands ("Run", "Check").
 
-**4. Progressive Disclosure — N skills**
-Skills with references/ directories should include explicit "See references/..."
-pointers in their body to guide readers to detailed material.
-
-Would you like help with any of these? I can start with P5 splitting for your
-longest skills, or fix broken references.
+Would you like help with any of these?
 ```
 
 ## Auto-fix Rules
 
-- **P1 (frontmatter):** insert missing YAML with auto-derived `name` and `description`
+- **P1 (frontmatter):** insert YAML with auto-derived `name` and `description`
 - **P2 (name):** derive from filename, convert to kebab-case
 - **P3 (description):** transform to "Use when..." pattern, preserve Korean/proper nouns
 - **P4 (invocation):** apply reference heuristics, confirm with user
@@ -259,4 +310,5 @@ longest skills, or fix broken references.
 - Never auto-apply P3 or P4 without showing the user what will change
 - Always re-run diagnosis after edits and show before/after comparison
 - Surface P5+ items with clear guidance on how to resolve them manually
-- Present expected impact at every decision point so the user can make informed choices
+- Present expected impact at every decision point
+- Respect target scope: if user selected specific skills, do not touch other files

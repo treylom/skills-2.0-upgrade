@@ -5,7 +5,9 @@ import os
 import re
 import sys
 
-SKILLS_DIR = sys.argv[1] if len(sys.argv) > 1 else os.path.expanduser("~/.claude/skills")
+targets = [a for a in sys.argv[1:] if not a.startswith("--")]
+SKILLS_DIR = targets[0] if targets else os.path.expanduser("~/.claude/skills")
+EXTRA_TARGETS = targets[1:]  # additional individual files
 DRY_RUN = "--dry-run" in sys.argv
 
 # Files to skip (not real skills)
@@ -289,7 +291,24 @@ def main():
     print(f"Target: {SKILLS_DIR}")
     print("=" * 50)
 
-    skill_files = scan_skills(SKILLS_DIR)
+    # Support individual files, multiple files, or directory scan
+    if os.path.isfile(SKILLS_DIR):
+        # Single file provided as first argument
+        skill_files = [SKILLS_DIR] + [f for f in EXTRA_TARGETS if os.path.isfile(f)]
+    elif EXTRA_TARGETS:
+        # Directory + additional specific file names
+        all_skills = scan_skills(SKILLS_DIR)
+        skill_files = []
+        for t in EXTRA_TARGETS:
+            # Try to find by name in the directory
+            candidates = [s for s in all_skills if os.path.basename(s).replace('.md', '').replace('/SKILL', '') == t
+                          or t in s]
+            skill_files.extend(candidates)
+        if not skill_files:
+            skill_files = all_skills  # fallback to all
+    else:
+        skill_files = scan_skills(SKILLS_DIR)
+
     print(f"Found {len(skill_files)} skill files\n")
 
     all_changes = []

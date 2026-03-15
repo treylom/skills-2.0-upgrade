@@ -28,19 +28,35 @@ Do not use for normal feature work inside a skill.
 
 ## Upgrade Workflow — Phase-by-Phase Guide
 
-Run diagnosis first, then proceed phase by phase. Each phase builds on the previous one.
+Start by selecting which skills to upgrade, then diagnose and proceed phase by phase.
 
-### Step 1: Diagnose (always start here)
+### Step 0: Select target (always start here)
+
+Ask the user what to upgrade before scanning anything:
+
+```
+What would you like to upgrade?
+  1. A specific skill — enter the skill name
+  2. Multiple skills — enter comma-separated names
+  3. All skills — scan the entire directory
+```
+
+Resolve skill names to file paths:
+- `my-skill` → `$SKILLS_DIR/my-skill.md` or `$SKILLS_DIR/my-skill/SKILL.md`
+- If not found, list available skills and ask the user to pick
+
+All subsequent steps operate only on the selected scope.
+
+### Step 1: Diagnose
 
 ```bash
-scripts/diagnose.sh <skills-path> [--json|--verbose]
+scripts/diagnose.sh <skill-or-directory> [--json|--verbose]
 ```
 
 Present the user with:
-- overall compliance score
-- total skills scanned
-- issue breakdown by priority (P1-P7)
-- top 5 most impactful issues
+- per-skill score and failed checks (if specific skills selected)
+- overall compliance score and issue breakdown (if all skills)
+- top impactful issues
 
 Then explain the upgrade path:
 

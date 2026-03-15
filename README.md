@@ -31,9 +31,11 @@ bash install.sh
 ### Basic usage
 
 ```bash
-/skills-upgrade
-/skills-upgrade --dry-run
-/skills-upgrade --upgrade
+/skills-upgrade                        # Interactive — asks what to upgrade
+/skills-upgrade my-skill               # Single skill
+/skills-upgrade skill-a skill-b        # Multiple skills
+/skills-upgrade --all                  # All skills
+/skills-upgrade --upgrade              # Guided upgrade
 ```
 
 ## Features
@@ -266,9 +268,11 @@ bash install.sh
 ### 기본 사용법
 
 ```bash
-/skills-upgrade
-/skills-upgrade --dry-run
-/skills-upgrade --upgrade
+/skills-upgrade                        # 인터랙티브 — 업그레이드 대상 선택
+/skills-upgrade my-skill               # 개별 스킬
+/skills-upgrade skill-a skill-b        # 복수 스킬
+/skills-upgrade --all                  # 전체 스킬
+/skills-upgrade --upgrade              # 가이드형 업그레이드
 ```
 
 ## 주요 기능
