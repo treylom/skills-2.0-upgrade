@@ -165,6 +165,10 @@ Real-world migration of 151 skills:
 
 Remaining gap to 100%: body >500 lines (13 skills, needs Opus splitting), broken references (13), imperative form (some)
 
+### Self-Improvement
+
+This tool was used to diagnose and upgrade itself through 3 iterations, achieving **100% compliance** on its own 12-item checklist. The self-improvement process validated that the diagnostic criteria are both strict enough to catch real issues and achievable with reasonable effort. See the full [Self-Improvement Report](SELF-IMPROVEMENT-REPORT.md) for details.
+
 ## Project Structure
 
 ```text
@@ -185,7 +189,8 @@ skills-2.0-upgrade/
 ├── CHANGELOG.md
 ├── install.sh
 ├── LICENSE
-└── README.md
+├── README.md
+└── SELF-IMPROVEMENT-REPORT.md
 ```
 
 ## Acknowledgments
@@ -358,10 +363,19 @@ Compliance improved: 62.0% -> 78.2%
 
 ## 실제 사례
 
-94개 스킬 마이그레이션 사례:
-- 시작 준수율: 62%
-- Phase 1 수정 후: 78%
-- 주요 이슈: frontmatter 누락 (12), 500줄 초과 (8), description 누락 (15)
+151개 스킬 마이그레이션 실측 결과:
+
+| Phase | 준수율 | 변화 |
+|-------|--------|------|
+| Baseline | 62% | Skills 2.0 구조 없음 |
+| P1-P2 후 | 78% | frontmatter + name 정규화 |
+| P1-P3 후 | **94.3%** | + description "Use when..." 패턴 |
+
+잔여 이슈: 500줄 초과 (13개, Opus 분할 필요), 깨진 참조 (13개), 명령형 문체 (일부)
+
+### 자가 개선
+
+이 도구는 자체 12항목 체크리스트로 스스로를 진단·개선하여 3회 반복 만에 **100% 준수율**을 달성했습니다. 자가 개선 과정은 진단 기준이 실제 이슈를 잡을 만큼 엄격하면서도 합리적인 노력으로 달성 가능함을 검증합니다. 전체 리포트: [Self-Improvement Report](SELF-IMPROVEMENT-REPORT.md)
 
 ## 프로젝트 구조
 
