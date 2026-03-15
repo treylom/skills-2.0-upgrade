@@ -3,11 +3,12 @@
 set -u
 
 SCRIPT_NAME=$(basename "$0")
-VERSION="1.0.0"
+VERSION="1.1.0"
 TARGET=""
 OUTPUT_FORMAT="markdown"
 VERBOSE=0
 NO_COLOR=0
+SECURITY_MODE=0
 TOTAL_SKILLS=0
 OVERALL_SUM=0
 CHECK_COUNT=12
@@ -69,12 +70,18 @@ usage() {
   cat <<EOF
 Usage:
   $SCRIPT_NAME <path-to-skill-or-directory> [--json] [--verbose] [--no-color]
+  $SCRIPT_NAME <path-to-any-directory> --security [--json]
+
+Modes:
+  (default)    12-item Skills 2.0 compliance check
+  --security   Pre-deployment security scan (PII, hardcoded paths, secrets)
 
 Examples:
   $SCRIPT_NAME /path/to/skills/
   $SCRIPT_NAME /path/to/skills/ --json
   $SCRIPT_NAME /path/to/skills/ --verbose
-  $SCRIPT_NAME /path/to/skills/my-skill.md
+  $SCRIPT_NAME /path/to/project/ --security
+  $SCRIPT_NAME /path/to/project/ --security --json
 EOF
 }
 
@@ -753,6 +760,9 @@ parse_args() {
       --markdown)
         OUTPUT_FORMAT="markdown"
         ;;
+      --security)
+        SECURITY_MODE=1
+        ;;
       --verbose)
         VERBOSE=1
         ;;
@@ -799,8 +809,203 @@ parse_args() {
   fi
 }
 
+## Security Scan Mode ##
+
+SEC_TOTAL_FILES=0
+SEC_TOTAL_FINDINGS=0
+SEC_FINDINGS=()
+
+SEC_PATTERNS=(
+  '/home/[a-z]'
+  '/Users/[A-Z]'
+  '/mnt/c/Users'
+  'C:\\Users'
+  'api[_-]key\s*[:=]'
+  'api[_-]secret'
+  'password\s*[:=]'
+  'ntn_[a-zA-Z0-9]'
+  'sk-[a-zA-Z0-9]'
+  'ghp_[a-zA-Z0-9]'
+  'PRIVATE KEY'
+  'Bearer [a-zA-Z0-9]'
+  'token\s*[:=]\s*["\x27][a-zA-Z0-9]'
+)
+
+SEC_LABELS=(
+  "Hardcoded home path"
+  "Hardcoded macOS user path"
+  "Hardcoded WSL user path"
+  "Hardcoded Windows path"
+  "API key assignment"
+  "API secret"
+  "Password assignment"
+  "Notion API token"
+  "OpenAI API key"
+  "GitHub personal token"
+  "Private key block"
+  "Bearer token"
+  "Hardcoded token value"
+)
+
+SEC_SEVERITIES=(
+  "medium"
+  "medium"
+  "medium"
+  "medium"
+  "high"
+  "high"
+  "high"
+  "critical"
+  "critical"
+  "critical"
+  "critical"
+  "high"
+  "high"
+)
+
+security_scan_file() {
+  file=$1
+  rel_path=$2
+  local found=0
+
+  idx=0
+  while [ "$idx" -lt "${#SEC_PATTERNS[@]}" ]; do
+    pattern=${SEC_PATTERNS[$idx]}
+    label=${SEC_LABELS[$idx]}
+    severity=${SEC_SEVERITIES[$idx]}
+
+    matches=$(grep -Eon "$pattern" "$file" 2>/dev/null | head -5)
+    if [ -n "$matches" ]; then
+      found=1
+      while IFS= read -r match_line; do
+        line_num=$(printf '%s' "$match_line" | cut -d: -f1)
+        snippet=$(printf '%s' "$match_line" | cut -d: -f2- | head -c 80)
+        SEC_FINDINGS+=("${severity}|${rel_path}|${line_num}|${label}|${snippet}")
+        SEC_TOTAL_FINDINGS=$((SEC_TOTAL_FINDINGS + 1))
+      done <<MATCHEOF
+$matches
+MATCHEOF
+    fi
+    idx=$((idx + 1))
+  done
+
+  SEC_TOTAL_FILES=$((SEC_TOTAL_FILES + 1))
+  return $found
+}
+
+security_scan_dir() {
+  target=$1
+  local file_list
+  file_list=$(find "$target" -type f \( -name '*.md' -o -name '*.sh' -o -name '*.py' -o -name '*.js' -o -name '*.yaml' -o -name '*.yml' -o -name '*.json' -o -name '*.toml' -o -name '*.txt' \) ! -path '*/.git/*' ! -path '*/node_modules/*' | sort)
+
+  while IFS= read -r file; do
+    [ -z "$file" ] && continue
+    rel=$(printf '%s' "$file" | sed "s|^$target/||")
+    security_scan_file "$file" "$rel"
+  done <<SCANEOF
+$file_list
+SCANEOF
+}
+
+print_security_markdown() {
+  printf 'Security Scan Report\n'
+  printf '====================\n'
+  printf 'Date: %s\n' "$NOW_LOCAL"
+  printf 'Path: %s\n' "$TARGET"
+  printf 'Files scanned: %s\n' "$SEC_TOTAL_FILES"
+  printf 'Findings: %s\n\n' "$SEC_TOTAL_FINDINGS"
+
+  if [ "$SEC_TOTAL_FINDINGS" -eq 0 ]; then
+    printf 'No security issues found.\n'
+    return
+  fi
+
+  crit=0; high=0; med=0
+  for f in "${SEC_FINDINGS[@]}"; do
+    sev=$(printf '%s' "$f" | cut -d'|' -f1)
+    case "$sev" in
+      critical) crit=$((crit + 1)) ;;
+      high) high=$((high + 1)) ;;
+      medium) med=$((med + 1)) ;;
+    esac
+  done
+  printf 'Summary: %s critical, %s high, %s medium\n\n' "$crit" "$high" "$med"
+
+  printf '| Severity | File | Line | Issue | Snippet |\n'
+  printf '|----------|------|------|-------|---------|\n'
+  for f in "${SEC_FINDINGS[@]}"; do
+    sev=$(printf '%s' "$f" | cut -d'|' -f1)
+    file=$(printf '%s' "$f" | cut -d'|' -f2)
+    line=$(printf '%s' "$f" | cut -d'|' -f3)
+    label=$(printf '%s' "$f" | cut -d'|' -f4)
+    snippet=$(printf '%s' "$f" | cut -d'|' -f5 | head -c 40)
+    printf '| %s | %s | %s | %s | %s |\n' "$sev" "$file" "$line" "$label" "$snippet"
+  done
+
+  printf '\nRecommendations:\n'
+  if [ "$crit" -gt 0 ]; then
+    printf -- '- CRITICAL: Remove or replace leaked secrets before deployment\n'
+  fi
+  if [ "$high" -gt 0 ]; then
+    printf -- '- HIGH: Replace API keys/tokens with environment variable references\n'
+  fi
+  if [ "$med" -gt 0 ]; then
+    printf -- '- MEDIUM: Replace hardcoded paths with relative paths or variables\n'
+  fi
+}
+
+print_security_json() {
+  printf '{\n'
+  printf '  "date": "%s",\n' "$NOW_UTC"
+  printf '  "path": "%s",\n' "$(json_escape "$TARGET")"
+  printf '  "files_scanned": %s,\n' "$SEC_TOTAL_FILES"
+  printf '  "total_findings": %s,\n' "$SEC_TOTAL_FINDINGS"
+  printf '  "findings": [\n'
+
+  idx=0
+  for f in "${SEC_FINDINGS[@]}"; do
+    sev=$(printf '%s' "$f" | cut -d'|' -f1)
+    file=$(printf '%s' "$f" | cut -d'|' -f2)
+    line=$(printf '%s' "$f" | cut -d'|' -f3)
+    label=$(printf '%s' "$f" | cut -d'|' -f4)
+    snippet=$(printf '%s' "$f" | cut -d'|' -f5)
+    printf '    { "severity": "%s", "file": "%s", "line": %s, "issue": "%s", "snippet": "%s" }' \
+      "$sev" "$(json_escape "$file")" "$line" "$(json_escape "$label")" "$(json_escape "$snippet")"
+    idx=$((idx + 1))
+    if [ "$idx" -lt "$SEC_TOTAL_FINDINGS" ]; then
+      printf ',\n'
+    else
+      printf '\n'
+    fi
+  done
+
+  printf '  ]\n'
+  printf '}\n'
+}
+
+run_security_scan() {
+  init_colors
+  security_scan_dir "$TARGET"
+  if [ "$OUTPUT_FORMAT" = "json" ]; then
+    print_security_json
+  else
+    print_security_markdown
+  fi
+  if [ "$SEC_TOTAL_FINDINGS" -gt 0 ]; then
+    exit 2
+  fi
+  exit 0
+}
+
+## Main ##
+
 main() {
   parse_args "$@"
+
+  if [ "$SECURITY_MODE" -eq 1 ]; then
+    run_security_scan
+  fi
+
   init_colors
 
   while IFS= read -r skill_path; do

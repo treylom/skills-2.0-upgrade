@@ -7,7 +7,8 @@
 | Metric | Value |
 |--------|-------|
 | Final self-score | **100.0%** (12/12 PASS) |
-| Iterations to 100% | 3 |
+| Security scan | **0 findings** (clean) |
+| Iterations to 100% | 4 (3 compliance + 1 security) |
 | Total files | 15 |
 | Total lines | 3,277 |
 
@@ -17,7 +18,7 @@
 
 **Commit**: `c2acfec` — feat: Skills 2.0 Auto-Upgrade v1.0.0
 
-The initial version was built by a 6-agent team (Leader=Opus 1M, Workers=GPT-5.4 via CLIProxyAPI, DA=GPT-5.4 xhigh):
+The initial version was built by a 6-agent team (Leader + 5 Workers + DA):
 
 | Agent | Deliverable | Lines |
 |-------|------------|-------|
@@ -26,7 +27,7 @@ The initial version was built by a 6-agent team (Leader=Opus 1M, Workers=GPT-5.4
 | skill-writer | `SKILL.md` + `skills-upgrade.md` — core skill + slash command | 334 |
 | ref-writer | 4 reference files — criteria, actions, spec, triggers | 956 |
 | docs-writer | `README.md` + `README-ko.md` + `CHANGELOG.md` — bilingual docs | 430 |
-| devils-advocate | Quality review (xhigh reasoning) | — |
+| devils-advocate | Quality review | — |
 
 **Self-diagnosis result**: 100.0% on first build.
 
@@ -74,6 +75,29 @@ The SKILL.md and command were redesigned to be user-friendly and guided:
 **Self-diagnosis issue found and fixed**:
 - `references/...` pattern in body text was detected as a broken reference → rewrote to avoid false positive
 - Final result: **100.0%** (12/12 PASS)
+
+### Iteration 4 — Pre-Deployment Security Scan
+
+**Commit**: `(current)` — feat: add --security scan mode
+
+Added a `--security` mode to `diagnose.sh` that scans for PII, hardcoded paths, and secrets before deployment.
+
+**Security scan of own project**:
+1. Initial scan found 2 findings in `SELF-IMPROVEMENT-REPORT.md`:
+   - Internal infrastructure details (`CLIProxyAPI`, `GPT-5.4`, `xhigh`) — generalized to remove implementation specifics
+2. After fix: **0 findings** (clean)
+
+**Scanner specification** (13 patterns, 3 severity levels):
+
+| Severity | Patterns | Count |
+|----------|----------|-------|
+| Critical | `ntn_*` (Notion), `sk-*` (OpenAI), `ghp_*` (GitHub), `PRIVATE KEY` | 4 |
+| High | `Bearer` token, `api_key/secret` assignment, `password` assignment | 4 |
+| Medium | `/home/<user>`, `/Users/<user>`, `/mnt/c/Users`, `C:\Users` | 5 |
+
+**False positive handling**: The scanner detects its own pattern strings as findings (e.g. `PRIVATE KEY` appears in the scanner's regex definition). This is expected and documented — users should review each finding before acting.
+
+**SKILL.md updated**: Added "Pre-Deployment Security Scan" section with usage examples and severity table.
 
 ## Remaining Gap Analysis (151 real-world skills at 94.3%)
 

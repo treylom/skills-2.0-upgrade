@@ -45,6 +45,7 @@ bash install.sh
 - **Cross-platform**: WSL, macOS, Linux
 - **JSON output**: Machine-parseable for CI/CD integration
 - **Slash command**: `/skills-upgrade` with 3 modes
+- **Security scan**: Pre-deployment PII, secrets, and hardcoded path detection
 
 ## Usage
 
@@ -109,6 +110,23 @@ Compliance improved: 62.0% -> 78.2%
 ~/.claude/scripts/diagnose.sh ~/.claude/skills/ --verbose
 ~/.claude/scripts/diagnose.sh ~/.claude/skills/my-skill.md
 ```
+
+### Security Scan (pre-deployment)
+
+```bash
+~/.claude/scripts/diagnose.sh /path/to/project --security
+~/.claude/scripts/diagnose.sh /path/to/project --security --json
+```
+
+Detects 13 patterns across 3 severity levels:
+
+| Severity | Detects |
+|----------|---------|
+| Critical | API keys (`sk-`, `ntn_`, `ghp_`), private key blocks |
+| High | Bearer tokens, API key/secret assignments, passwords |
+| Medium | Hardcoded user paths (`/home/`, `/mnt/c/Users`, `C:\Users`) |
+
+Run before every `git push` or GitHub deployment to prevent accidental leaks.
 
 ## 12-Item Diagnostic Checklist
 
@@ -253,6 +271,7 @@ bash install.sh
 - **크로스 플랫폼**: WSL, macOS, Linux
 - **JSON 출력**: CI/CD 통합용 머신 파싱 가능
 - **슬래시 커맨드**: `/skills-upgrade` 3가지 모드
+- **보안 스캔**: 배포 전 개인정보, 시크릿, 하드코딩 경로 탐지
 
 ## 사용법
 
@@ -317,6 +336,23 @@ Compliance improved: 62.0% -> 78.2%
 ~/.claude/scripts/diagnose.sh ~/.claude/skills/ --verbose
 ~/.claude/scripts/diagnose.sh ~/.claude/skills/my-skill.md
 ```
+
+### 보안 스캔 (배포 전)
+
+```bash
+~/.claude/scripts/diagnose.sh /path/to/project --security
+~/.claude/scripts/diagnose.sh /path/to/project --security --json
+```
+
+3단계 심각도로 13개 패턴을 탐지합니다:
+
+| 심각도 | 탐지 대상 |
+|--------|----------|
+| Critical | API 키 (`sk-`, `ntn_`, `ghp_`), 개인키 블록 |
+| High | Bearer 토큰, API 키/시크릿 할당, 비밀번호 |
+| Medium | 하드코딩된 사용자 경로 (`/home/`, `/mnt/c/Users`, `C:\Users`) |
+
+`git push` 또는 GitHub 배포 전 반드시 실행하여 우발적 유출을 방지하세요.
 
 ## 12항목 진단 체크리스트
 

@@ -169,6 +169,25 @@ See `references/diagnostic-criteria.md` for scoring details.
 | After P1-P4 (est.) | ~97% | +2.7%p |
 | After P5+ (est.) | ~100% | +3%p |
 
+## Pre-Deployment Security Scan
+
+Before publishing skills or pushing to GitHub, run the security scanner:
+
+```bash
+scripts/diagnose.sh <project-path> --security
+scripts/diagnose.sh <project-path> --security --json
+```
+
+Detects 13 patterns across 3 severity levels:
+
+| Severity | What it catches |
+|----------|----------------|
+| Critical | API keys (`sk-`, `ntn_`, `ghp_`), private key blocks |
+| High | Bearer tokens, API key/secret assignments, password assignments |
+| Medium | Hardcoded user paths (`/home/user`, `/mnt/c/Users`, `C:\Users`) |
+
+False positives can occur when scanning code that contains detection patterns as string literals (e.g. the scanner's own source code). Review each finding before acting.
+
 ## Common Mistakes
 
 - Editing without running diagnosis first
@@ -177,6 +196,7 @@ See `references/diagnostic-criteria.md` for scoring details.
 - Skipping P3 even though it has the highest aggregate impact
 - Running P5 with Sonnet instead of Opus (content understanding needed)
 - Forgetting to re-diagnose after fixes
+- Deploying without running `--security` scan first
 
 See `references/upgrade-actions.md` for detailed P1-P7 procedures.
 See `references/trigger-optimization.md` for description optimization strategy.
