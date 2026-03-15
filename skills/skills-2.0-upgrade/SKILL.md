@@ -1,152 +1,182 @@
 ---
 name: skills-2-0-upgrade
-description: Use when upgrading Claude Code skills to Skills 2.0 compliance, when diagnosing skill health scores, when frontmatter is missing or malformed, when skills exceed 500-line limit, or when skill directories lack SKILL.md structure
+description: Use when upgrading Claude Code skills to Skills 2.0 compliance, when diagnosing skill health scores, when frontmatter is missing or malformed, when skills exceed 500-line limit, when skill directories lack SKILL.md structure, or when compliance score needs improvement
 ---
 
 # Skills 2.0 Upgrade
 
 ## Overview
-Skills 2.0 is Anthropic's 2026 skill framework for discoverable, token-efficient, composable skills.
 
-Its core pattern is Progressive Disclosure across three tiers:
-1. Frontmatter for fast routing
-2. `SKILL.md` for the working guide
-3. `references/` for heavy detail and reference-only content
+Skills 2.0 is Anthropic's 2026 skill framework built on Progressive Disclosure:
+1. **Frontmatter** — fast routing and discovery
+2. **SKILL.md** — working guide (<500 lines)
+3. **references/** — heavy detail loaded on demand
 
-This matters because modern skill ecosystems are large. Public catalogs such as agentskills.io expose 351K+ skills, so discovery quality depends on clean frontmatter, searchable trigger wording, and compact bodies.
-
-Upgrading older skills improves:
-- compatibility with current skill loaders
-- Claude Search Optimization (CSO)
-- token efficiency in always-loaded contexts
-- maintainability for long or reference-heavy skills
-- cross-tool portability across Claude Code and adjacent CLIs
-
-Target state:
-- one skill per directory
-- one `SKILL.md` entrypoint
-- short, searchable body
-- heavy detail moved into `references/`
-- reference files marked with invocation control when appropriate
+With 351K+ published skills, clean structure directly impacts discoverability, token efficiency, and cross-tool portability.
 
 ## When to Use
-Use this skill when any of these symptoms appear:
-- `missing frontmatter` — the skill has no YAML frontmatter
-- `malformed frontmatter` — fields are missing, extra keys exist, or YAML is invalid
-- `skill too long` — body exceeds the 500-line guideline
-- `orphan directory` — a skill folder exists without `SKILL.md`
-- `broken reference` — `references/` links or targets are invalid
-- description does not start with `Use when...`
-- description explains workflow instead of triggers
-- compliance score is low or trending down
-- reference files should use `disable-model-invocation`
 
-Do not use this skill for normal feature implementation inside a skill. Use it for diagnosis, restructuring, and compliance upgrades.
+Trigger on any of these symptoms:
+- `missing frontmatter`, `malformed frontmatter`
+- `skill too long` (body >500 lines)
+- `orphan directory` (skill folder without `SKILL.md`)
+- `broken reference` (invalid `references/` links)
+- description missing `Use when...` pattern
+- low or declining compliance score
+
+Do not use for normal feature work inside a skill.
+
+## Upgrade Workflow — Phase-by-Phase Guide
+
+Run diagnosis first, then proceed phase by phase. Each phase builds on the previous one.
+
+### Step 1: Diagnose (always start here)
+
+```bash
+scripts/diagnose.sh <skills-path> [--json|--verbose]
+```
+
+Present the user with:
+- overall compliance score
+- total skills scanned
+- issue breakdown by priority (P1-P7)
+- top 5 most impactful issues
+
+Then explain the upgrade path:
+
+```
+Your skills score X%. Here's what each upgrade phase would improve:
+
+| Phase | Fixes | Expected Impact | Automation |
+|-------|-------|-----------------|------------|
+| P1-P2 | Frontmatter + name | +10-16%p | Fully automatic |
+| P3    | Description "Use when..." | +8-16%p | Semi-auto (batch) |
+| P4    | Invocation control | +1-3%p | Semi-auto (confirm) |
+| P5+   | File splitting + structure | +2-6%p | Manual (Opus) |
+
+Which phase would you like to run? (P1-P2 / P1-P3 / P1-P4 / all)
+```
+
+### Step 2: Execute chosen phases
+
+Run `scripts/backup.sh <skills-path>` before any changes.
+
+**P1-P2 (Automatic):**
+Run `scripts/batch-p1p2p3.py <path> --dry-run` to preview, then apply.
+- P1 adds missing frontmatter with auto-generated name and description
+- P2 normalizes name fields to kebab-case
+- No user confirmation needed — deterministic pattern matching
+
+**P3 (Semi-automatic):**
+Run `scripts/batch-p1p2p3.py <path>` which also handles P3.
+- Transforms existing descriptions to "Use when..." pattern
+- Preserves Korean text, proper nouns, and acronyms
+- Show the user a sample of changes before applying
+
+**P4 (Confirm with user):**
+Identify reference-type skills using heuristics (name contains guide/reference/spec/examples/templates/schema/collection/strategies/checklist).
+- Present candidate list to user
+- Add `disable-model-invocation: true` to confirmed files
+
+### Step 3: Re-diagnose and report
+
+Run diagnosis again and show before/after comparison:
+
+```
+Compliance improved: X% → Y% (+Z%p)
+
+| Priority | Before | After | Fixed |
+|----------|--------|-------|-------|
+| P1       | N      | 0     | N     |
+| P2       | N      | 0     | N     |
+| P3       | N      | M     | N-M   |
+| P4       | N      | M     | N-M   |
+| P5+      | N      | N     | (manual) |
+```
+
+### Step 4: Guide beyond P4 (final optimization)
+
+After P1-P4, explain remaining issues and how to resolve them:
+
+```
+Remaining issues for 100% compliance:
+
+1. Body >500 lines (P5) — N skills
+   → Requires content understanding to split into SKILL.md + references/
+   → Recommended: Opus model with high effort
+   → Run: /skills-upgrade --split <skill-path> (interactive, one at a time)
+
+2. Broken references — N skills
+   → Referenced files in references/ don't exist
+   → Fix: create the missing files or remove the broken links
+
+3. Imperative form — N skills
+   → Body uses "you should" instead of direct commands ("Run", "Check")
+   → Fix: rewrite advisory phrasing to imperative
+
+4. Orphan directories — N skills
+   → Skill folders without SKILL.md entry point
+   → Fix: add SKILL.md or restructure into parent skill
+
+Would you like to start P5 splitting for the longest skills?
+```
+
+For P5 splitting, guide the user through each skill:
+1. Read the full content
+2. Identify logical sections that can become reference files
+3. Propose a split plan (what stays in SKILL.md, what moves to references/)
+4. Add progressive disclosure pointers linking to the new reference files
+5. Execute after user approval
 
 ## Quick Reference
-| Criterion | Description | Weight |
-|-----------|-------------|--------|
-| Frontmatter | `name` + `description` YAML block | 20% |
-| Body Length | ≤500 lines (excluding frontmatter) | 15% |
-| Directory Structure | `SKILL.md` + `references/` for long skills | 10% |
-| Description Pattern | Starts with `Use when...` | 5% |
-| Model Control | `disable-model-invocation` for references | 8% |
 
-Practical interpretation:
-- fix frontmatter first because it drives routing
-- shorten oversized skills before polishing prose
-- move heavy reference content out of `SKILL.md`
-- keep descriptions trigger-focused, not workflow-focused
-- add invocation control only to reference files, not the main entrypoint
+| # | Check | Weight |
+|---|-------|--------|
+| 1 | Frontmatter exists | 20% |
+| 2 | `name:` field valid | 8% |
+| 3 | `description:` field exists | 10% |
+| 4 | Description "Use when..." | 5% |
+| 5 | Description third-person | 3% |
+| 6 | Body ≤500 lines | 15% |
+| 7 | Directory structure | 10% |
+| 8 | `disable-model-invocation` | 8% |
+| 9 | No orphan directories | 5% |
+| 10 | No broken references | 5% |
+| 11 | Progressive Disclosure | 5% |
+| 12 | Imperative form | 6% |
 
-## Diagnosis
-Run the repo diagnostic first:
-
-```bash
-scripts/diagnose.sh .claude/skills/
-```
-
-Modes:
-- `--markdown` (default) — human-readable report
-- `--json` — machine-readable output for automation
-- `--verbose` — expanded issue details
-
-Examples:
-
-```bash
-scripts/diagnose.sh .claude/skills/ --markdown
-scripts/diagnose.sh .claude/skills/ --json
-scripts/diagnose.sh .claude/skills/ --verbose
-```
-
-Typical summary output:
-
-```text
-Overall compliance: 78.2% (94 skills scanned)
-```
-
-Minimal JSON shape:
-
-```json
-{
-  "overallCompliance": 78.2,
-  "skillsScanned": 94,
-  "issues": [{"priority": "P1", "path": "...", "type": "missing_frontmatter"}]
-}
-```
-
-Use diagnosis before any edits. Upgrade order should follow the reported priorities rather than ad-hoc cleanup.
-
-## Upgrade Actions
-| Priority | Action | Automation |
-|----------|--------|------------|
-| P1 | Add frontmatter | Automatic |
-| P2 | Normalize name field | Automatic |
-| P3 | Generate description | Semi-auto |
-| P4 | Add invocation control | Semi-auto |
-| P5 | Split long files | Manual (Opus) |
-| P6 | Fix directory structure | Semi-auto |
-| P7 | Handle orphan dirs | Semi-auto |
-
-Execution order:
-1. repair routing metadata (`P1`, `P2`)
-2. improve discoverability (`P3`)
-3. control reference loading (`P4`)
-4. split oversized files (`P5`)
-5. normalize folder layout (`P6`, `P7`)
-
-See `references/upgrade-actions.md` for detailed procedures.
+See `references/diagnostic-criteria.md` for scoring details.
 
 ## Model Guide
-| Task | Recommended Model | Effort | Why |
-|------|-------------------|--------|-----|
-| Diagnosis only | Any model (bash) | N/A | No LLM needed, pure bash |
-| P1-P2 auto-fix | Sonnet | medium | Simple pattern matching |
-| P3 file splitting | Opus | high | Content understanding needed |
-| Full upgrade | Opus | high | Includes splitting |
-| Codex CLI | `codex exec` | low | JSON output mode |
 
-Rule of thumb:
-- use bash for scoring and inventory
-- use Sonnet for deterministic metadata fixes
-- use Opus when restructuring long content or extracting references
+| Task | Model | Effort |
+|------|-------|--------|
+| Diagnosis | Any (bash) | N/A |
+| P1-P3 batch fix | Sonnet | medium |
+| P4 invocation control | Sonnet | medium |
+| P5 file splitting | Opus | high |
+| Full upgrade | Opus | high |
 
-## Cross-Platform
-| Platform | Support Level | Notes |
-|----------|--------------|-------|
-| Claude Code | Full | All features (interactive + auto-fix) |
-| Codex CLI | Partial | `codex exec "diagnose.sh .claude/skills/ --json"` |
-| Antigravity | Partial | Skill file read + bash execution |
-| Cursor/Windsurf | Minimal | `.md` file read only, manual guide |
+## Real-World Impact
 
-Keep the main guidance portable, but assume best automation quality in Claude Code.
+151 skills, measured results:
+
+| Phase | Compliance | Gain |
+|-------|-----------|------|
+| Baseline | 62% | — |
+| After P1-P2 | 78% | +16%p |
+| After P1-P3 | 94.3% | +16.3%p |
+| After P1-P4 (est.) | ~97% | +2.7%p |
+| After P5+ (est.) | ~100% | +3%p |
 
 ## Common Mistakes
-- Putting workflow summary in `description` instead of triggers only
-- Using `you` or `your` in `description` instead of third person
-- Editing without diagnosis first
+
+- Editing without running diagnosis first
 - Skipping backup before upgrade
-- Skipping `P3` description work even though CSO impact is high
-- Leaving oversized content inline instead of moving it to `references/`
-- Forgetting invocation control on reference-only files
-- Fixing one file while leaving orphan directories unresolved
+- Putting workflow summary in `description` instead of triggers
+- Skipping P3 even though it has the highest aggregate impact
+- Running P5 with Sonnet instead of Opus (content understanding needed)
+- Forgetting to re-diagnose after fixes
+
+See `references/upgrade-actions.md` for detailed P1-P7 procedures.
+See `references/trigger-optimization.md` for description optimization strategy.
