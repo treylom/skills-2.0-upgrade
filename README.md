@@ -219,12 +219,58 @@ skills-2.0-upgrade/
 
 ## Acknowledgments
 
-This project builds on the work of:
+This project's 12-item diagnostic checklist merges two complementary approaches: Anthropic's official Skills 2.0 framework (8 items) and fivetaku's community validation patterns (4 items).
 
-- **[superpowers:writing-skills](https://github.com/anthropics/superpowers)** (Anthropic) — TDD-based skill authoring methodology, Claude Search Optimization (CSO), and official SKILL.md frontmatter specification.
-- **[fivetaku/skillers-suda](https://github.com/fivetaku/skillers-suda)** (MIT) — 9-item structural validation (`validate-skill.sh`), Auto Eval methodology (`with_skill` vs `without_skill` A/B comparison), and description trigger optimization strategy.
+### From [superpowers:writing-skills](https://github.com/anthropics/superpowers) (Anthropic)
 
-Our 12-item diagnostic checklist merges 8 items from Skills 2.0 with 4 additional items from skillers-suda (third-person description, progressive disclosure, imperative form, and enhanced trigger validation).
+Anthropic's official skill authoring methodology defines what a "good skill" looks like. We adopted three core ideas:
+
+**1. Progressive Disclosure 3-Tier Model** — The key architectural insight: don't dump everything into one file. Instead, split into three layers that load progressively:
+
+| Tier | What | Budget | Loaded when |
+|------|------|--------|-------------|
+| Frontmatter | `name` + `description` | <100 tokens | Always (during discovery) |
+| SKILL.md body | Core guide | <2000 tokens | When skill is selected |
+| references/ | Heavy detail | Unlimited | On demand only |
+
+This directly shaped our checks #1 (frontmatter), #6 (body ≤500 lines), #7 (directory structure), and #11 (progressive disclosure pointers).
+
+**2. Claude Search Optimization (CSO)** — Skills need to be *findable* by AI agents, not just readable by humans. The `description` field is the primary search surface — it should answer "Should this skill trigger now?" rather than summarize what the skill does. This led to check #4 ("Use when..." pattern) and our trigger optimization reference.
+
+**3. TDD for Skills (RED → GREEN → REFACTOR)** — Write a failing diagnostic first, then build the skill to pass it, then refine. We used this cycle ourselves: diagnose.sh was the "test", SKILL.md was the "implementation", and the self-improvement iterations were the "refactor". This validated our own tool against its own criteria.
+
+**4. Frontmatter Spec** — Only two required fields: `name` (kebab-case identifier) and `description` (max 1024 chars, starts with "Use when...", third-person, no workflow summary). Reference-only files should add `disable-model-invocation: true`. This directly maps to checks #1-#5 and #8.
+
+### From [fivetaku/skillers-suda](https://github.com/fivetaku/skillers-suda) (MIT)
+
+fivetaku's community project adds practical validation patterns that catch issues Anthropic's spec doesn't explicitly check:
+
+**1. Third-Person Description (check #5)** — Descriptions should avoid "you" and "your" because the audience is the AI agent's routing system, not a human reader. "Use when analyzing code" works better than "Use when you need to analyze code" for machine matching. Weight: 3%.
+
+**2. Progressive Disclosure Verification (check #11)** — Having a `references/` directory isn't enough — the SKILL.md body must explicitly say "See references/..." so the agent knows the material exists and when to load it. Without this pointer, reference files become invisible. Weight: 5%.
+
+**3. Imperative Form (check #12)** — Skill bodies should use direct commands ("Run diagnose.sh", "Check the frontmatter") rather than advisory phrasing ("you should run", "you must check"). Imperative instructions are clearer for agents and consume fewer tokens. Weight: 6%.
+
+**4. Should-Trigger / Should-Not-Trigger Testing** — Design descriptions by writing 10 queries that should trigger the skill and 10 that should not. This "pushy description" strategy prevents both under-triggering (missing legitimate requests) and over-triggering (false positives). We adopted this as our trigger optimization reference.
+
+**5. Auto Eval Methodology** — Compare outcomes `with_skill` vs `without_skill` (A/B testing for skills). This influenced our before/after reporting: after every upgrade, re-diagnose and show the delta so users can see the concrete impact.
+
+### How They Combine
+
+| Check | Source | What it catches |
+|-------|--------|----------------|
+| #1 Frontmatter | Skills 2.0 | Can the skill be discovered? |
+| #2 Name field | Skills 2.0 | Can the skill be stably referenced? |
+| #3 Description field | Skills 2.0 | Does the skill have a search surface? |
+| #4 "Use when..." | Skills 2.0 + CSO | Is the description trigger-focused? |
+| #5 Third-person | skillers-suda | Is the description agent-optimized? |
+| #6 Body ≤500 lines | Skills 2.0 | Is the skill token-efficient? |
+| #7 Directory structure | Skills 2.0 | Does a long skill use SKILL.md + references/? |
+| #8 Invocation control | Skills 2.0 | Are reference files marked as non-executable? |
+| #9 No orphan dirs | Skills 2.0 | Does every skill folder have an entry point? |
+| #10 No broken refs | Skills 2.0 | Do reference links resolve? |
+| #11 Progressive disclosure | skillers-suda | Does the body point to its references? |
+| #12 Imperative form | skillers-suda | Are instructions direct commands? |
 
 ## License
 
@@ -450,12 +496,58 @@ skills-2.0-upgrade/
 
 ## Acknowledgments
 
-이 프로젝트는 다음 작업을 기반으로 합니다:
+이 프로젝트의 12항목 진단 체크리스트는 Anthropic의 공식 Skills 2.0 프레임워크(8항목)와 fivetaku의 커뮤니티 검증 패턴(4항목)을 결합한 것입니다.
 
-- **[superpowers:writing-skills](https://github.com/anthropics/superpowers)** (Anthropic) — TDD 기반 스킬 작성 방법론, Claude Search Optimization (CSO), 그리고 공식 SKILL.md frontmatter 명세.
-- **[fivetaku/skillers-suda](https://github.com/fivetaku/skillers-suda)** (MIT) — 9-item structural validation (`validate-skill.sh`), Auto Eval 방법론 (`with_skill` vs `without_skill` A/B comparison), 그리고 description trigger optimization 전략.
+### [superpowers:writing-skills](https://github.com/anthropics/superpowers) (Anthropic)에서 가져온 것
 
-이 프로젝트의 12-item diagnostic checklist는 Skills 2.0의 8개 항목과 skillers-suda의 추가 4개 항목(third-person description, progressive disclosure, imperative form, enhanced trigger validation)을 결합합니다.
+Anthropic의 공식 스킬 작성 방법론으로, "좋은 스킬"의 기준을 정의합니다. 세 가지 핵심 아이디어를 채택했습니다:
+
+**1. Progressive Disclosure 3-Tier 모델** — 핵심 설계 원칙: 하나의 파일에 모든 걸 넣지 말고, 단계적으로 로드되는 3개 계층으로 분리합니다.
+
+| 계층 | 내용 | 토큰 예산 | 로드 시점 |
+|------|------|----------|----------|
+| Frontmatter | `name` + `description` | <100 토큰 | 항상 (검색/발견 시) |
+| SKILL.md 본문 | 핵심 가이드 | <2000 토큰 | 스킬 선택 시 |
+| references/ | 상세 자료 | 제한 없음 | 필요할 때만 |
+
+쉽게 말하면: 스킬의 "표지"(frontmatter)는 항상 보이고, "목차"(SKILL.md)는 열었을 때, "부록"(references/)은 필요할 때만 읽는 구조입니다. 이 원칙이 체크 #1(frontmatter), #6(본문 500줄), #7(디렉토리 구조), #11(progressive disclosure 포인터)의 근거입니다.
+
+**2. Claude Search Optimization (CSO)** — 스킬은 사람이 아니라 AI 에이전트가 찾을 수 있어야 합니다. `description` 필드는 "이 스킬을 지금 실행해야 하나?"라는 질문에 답하는 검색 표면입니다. 워크플로우 요약이 아니라 트리거 조건을 써야 합니다. 이것이 체크 #4("Use when..." 패턴)와 트리거 최적화 레퍼런스의 근거입니다.
+
+**3. 스킬용 TDD (RED → GREEN → REFACTOR)** — 먼저 실패하는 진단을 만들고, 그 진단을 통과하는 스킬을 만들고, 개선합니다. 이 프로젝트 자체가 이 방법론을 따랐습니다: diagnose.sh가 "테스트", SKILL.md가 "구현", 자가 개선 4회 반복이 "리팩토링"이었습니다.
+
+**4. Frontmatter 명세** — 필수 필드 2개만: `name`(kebab-case)과 `description`(최대 1024자, "Use when..."으로 시작, 3인칭, 워크플로우 요약 금지). 레퍼런스 전용 파일은 `disable-model-invocation: true`를 추가합니다. 체크 #1-#5, #8에 직접 대응합니다.
+
+### [fivetaku/skillers-suda](https://github.com/fivetaku/skillers-suda) (MIT)에서 가져온 것
+
+fivetaku의 커뮤니티 프로젝트로, Anthropic 명세가 명시적으로 체크하지 않는 실전적 검증 패턴을 추가합니다:
+
+**1. 3인칭 description (체크 #5)** — description에서 "you", "your"를 피합니다. 왜냐하면 description의 독자는 사람이 아니라 AI 에이전트의 라우팅 시스템이기 때문입니다. "Use when analyzing code"가 "Use when you need to analyze code"보다 기계 매칭에 효과적입니다. 가중치: 3%.
+
+**2. Progressive Disclosure 검증 (체크 #11)** — `references/` 폴더가 있는 것만으로는 부족합니다. SKILL.md 본문에 "See references/..."라고 명시적으로 안내해야 에이전트가 그 자료의 존재와 로드 시점을 알 수 있습니다. 이 포인터가 없으면 레퍼런스 파일이 사실상 보이지 않게 됩니다. 가중치: 5%.
+
+**3. 명령형 지시문 (체크 #12)** — 스킬 본문은 "you should check"(조언형)이 아니라 "Check the frontmatter"(명령형)으로 작성해야 합니다. 명령형이 에이전트에게 더 명확하고, 토큰도 적게 사용합니다. 가중치: 6%.
+
+**4. Should-Trigger / Should-Not-Trigger 테스트** — description을 설계할 때 "이 스킬이 실행되어야 하는 질문 10개"와 "실행되면 안 되는 질문 10개"를 작성합니다. 이 "pushy description" 전략은 과소 트리거(정당한 요청을 놓침)와 과다 트리거(오발동)를 모두 방지합니다.
+
+**5. Auto Eval 방법론** — `with_skill` vs `without_skill` 비교(스킬의 A/B 테스트). 이것이 우리의 전후 비교 리포팅에 영향을 주었습니다: 업그레이드 후 항상 재진단하여 구체적인 개선 수치를 보여줍니다.
+
+### 어떻게 결합되는가
+
+| 체크 | 출처 | 무엇을 잡아내는가 |
+|------|------|-----------------|
+| #1 Frontmatter | Skills 2.0 | 스킬이 발견될 수 있는가? |
+| #2 Name 필드 | Skills 2.0 | 스킬이 안정적으로 참조될 수 있는가? |
+| #3 Description 필드 | Skills 2.0 | 스킬에 검색 표면이 있는가? |
+| #4 "Use when..." | Skills 2.0 + CSO | description이 트리거 중심인가? |
+| #5 3인칭 | skillers-suda | description이 에이전트에 최적화되어 있는가? |
+| #6 본문 ≤500줄 | Skills 2.0 | 스킬이 토큰 효율적인가? |
+| #7 디렉토리 구조 | Skills 2.0 | 긴 스킬이 SKILL.md + references/를 사용하는가? |
+| #8 Invocation 제어 | Skills 2.0 | 레퍼런스 파일이 비실행으로 표시되어 있는가? |
+| #9 고아 디렉토리 없음 | Skills 2.0 | 모든 스킬 폴더에 진입점이 있는가? |
+| #10 깨진 참조 없음 | Skills 2.0 | 레퍼런스 링크가 실제 파일로 연결되는가? |
+| #11 Progressive Disclosure | skillers-suda | 본문이 레퍼런스를 안내하는가? |
+| #12 명령형 지시문 | skillers-suda | 지시사항이 직접 명령인가? |
 
 ## License
 
