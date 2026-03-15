@@ -35,7 +35,8 @@ bash install.sh
 /skills-upgrade my-skill               # Single skill
 /skills-upgrade skill-a skill-b        # Multiple skills
 /skills-upgrade --all                  # All skills
-/skills-upgrade --upgrade              # Guided upgrade
+/skills-upgrade --diagnose             # Diagnose only (read-only)
+/skills-upgrade --dry-run              # Preview changes
 ```
 
 ## Features
@@ -90,19 +91,13 @@ Planned changes
 No files were modified.
 ```
 
-### Upgrade
+### Interactive Upgrade
 
 ```bash
-/skills-upgrade --upgrade
+/skills-upgrade my-skill
 ```
 
-Example output:
-
-```text
-Backup created: ~/.claude/skills-backup-20260315-143022.tar.gz
-Re-diagnosing after fixes...
-Compliance improved: 62.0% -> 78.2%
-```
+Walks you through target selection → diagnosis → phase selection → preview → apply → before/after comparison. No flags needed — the default mode is interactive.
 
 ### Direct Script Usage
 
@@ -272,7 +267,8 @@ bash install.sh
 /skills-upgrade my-skill               # 개별 스킬
 /skills-upgrade skill-a skill-b        # 복수 스킬
 /skills-upgrade --all                  # 전체 스킬
-/skills-upgrade --upgrade              # 가이드형 업그레이드
+/skills-upgrade --diagnose             # 진단만 (읽기 전용)
+/skills-upgrade --dry-run              # 변경 미리보기
 ```
 
 ## 주요 기능
@@ -327,19 +323,13 @@ Planned changes
 No files were modified.
 ```
 
-### 업그레이드
+### 인터랙티브 업그레이드
 
 ```bash
-/skills-upgrade --upgrade
+/skills-upgrade my-skill
 ```
 
-예시 출력:
-
-```text
-Backup created: ~/.claude/skills-backup-20260315-143022.tar.gz
-Re-diagnosing after fixes...
-Compliance improved: 62.0% -> 78.2%
-```
+대상 선택 → 진단 → Phase 선택 → 미리보기 → 적용 → 전후 비교까지 단계별로 안내합니다. 기본 모드가 인터랙티브이므로 별도 플래그 없이 실행하면 됩니다.
 
 ### 스크립트 직접 실행
 

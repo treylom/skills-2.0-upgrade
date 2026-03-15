@@ -24,8 +24,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
   - `skills-2.0-spec.md`: Skills 2.0 education document with 1.0 vs 2.0 comparison
   - `trigger-optimization.md`: Description optimization guide (skillers-suda patterns)
 - `commands/skills-upgrade.md`: `/skills-upgrade` slash command
-  - 3 modes: `--diagnose` (default), `--dry-run`, `--upgrade`
-  - 4-phase pipeline: Scan → Report → Plan → Execute
+  - Interactive default + `--diagnose` (read-only) and `--dry-run` (preview) modes
+  - Target selection: single skill, multiple skills, or all
+  - 4-phase pipeline: Target → Scan → Report → Plan → Execute
 - `install.sh`: One-click installer
   - Cross-platform: WSL, macOS, Linux
   - curl-pipe support: `curl -fsSL ... | bash`
