@@ -157,7 +157,7 @@ skills-2.0-upgrade/                    # 3,277 lines total
 
 This project follows two complementary quality assurance approaches:
 
-### A. Anthropic `superpowers:writing-skills` — TDD for Skills
+### A. obra's `superpowers:writing-skills` — TDD for Skills
 
 | TDD Phase | Application |
 |-----------|------------|

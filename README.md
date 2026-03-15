@@ -219,11 +219,11 @@ skills-2.0-upgrade/
 
 ## Acknowledgments
 
-This project's 12-item diagnostic checklist merges two complementary approaches: Anthropic's official Skills 2.0 framework (8 items) and fivetaku's community validation patterns (4 items).
+This project's 12-item diagnostic checklist merges two complementary approaches: obra's superpowers skill framework (8 items) and fivetaku's community validation patterns (4 items).
 
-### From [superpowers:writing-skills](https://github.com/anthropics/superpowers) (Anthropic)
+### From [superpowers:writing-skills](https://github.com/obra/superpowers) (obra)
 
-Anthropic's official skill authoring methodology defines what a "good skill" looks like. We adopted three core ideas:
+obra's superpowers project defines a practical skill authoring methodology for Claude Code. We adopted three core ideas:
 
 **1. Progressive Disclosure 3-Tier Model** — The key architectural insight: don't dump everything into one file. Instead, split into three layers that load progressively:
 
@@ -496,11 +496,11 @@ skills-2.0-upgrade/
 
 ## Acknowledgments
 
-이 프로젝트의 12항목 진단 체크리스트는 Anthropic의 공식 Skills 2.0 프레임워크(8항목)와 fivetaku의 커뮤니티 검증 패턴(4항목)을 결합한 것입니다.
+이 프로젝트의 12항목 진단 체크리스트는 obra의 superpowers 스킬 프레임워크(8항목)와 fivetaku의 커뮤니티 검증 패턴(4항목)을 결합한 것입니다.
 
-### [superpowers:writing-skills](https://github.com/anthropics/superpowers) (Anthropic)에서 가져온 것
+### [superpowers:writing-skills](https://github.com/obra/superpowers) (obra)에서 가져온 것
 
-Anthropic의 공식 스킬 작성 방법론으로, "좋은 스킬"의 기준을 정의합니다. 세 가지 핵심 아이디어를 채택했습니다:
+obra의 superpowers 프로젝트는 Claude Code용 실전적 스킬 작성 방법론을 정의합니다. 세 가지 핵심 아이디어를 채택했습니다:
 
 **1. Progressive Disclosure 3-Tier 모델** — 핵심 설계 원칙: 하나의 파일에 모든 걸 넣지 말고, 단계적으로 로드되는 3개 계층으로 분리합니다.
 

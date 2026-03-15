@@ -35,5 +35,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - `README-ko.md`: Korean documentation
 
 ### Acknowledgments
-- [superpowers:writing-skills](https://github.com/anthropics/superpowers) (Anthropic) — TDD methodology, CSO, frontmatter spec
+- [superpowers:writing-skills](https://github.com/obra/superpowers) (obra) — TDD methodology, CSO, frontmatter spec
 - [fivetaku/skillers-suda](https://github.com/fivetaku/skillers-suda) (MIT) — Structural validation, Auto Eval, trigger optimization
